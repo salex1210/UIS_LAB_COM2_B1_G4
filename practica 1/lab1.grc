@@ -45,25 +45,6 @@ blocks:
     coordinate: [184, 12]
     rotation: 0
     state: enabled
-- name: analog_noise_source_x_0
-  id: analog_noise_source_x
-  parameters:
-    affinity: ''
-    alias: ''
-    amp: '1'
-    comment: ''
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    noise_type: analog.GR_GAUSSIAN
-    seed: '0'
-    type: int
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [120, 364.0]
-    rotation: 0
-    state: disabled
 - name: analog_noise_source_x_1
   id: analog_noise_source_x
   parameters:
@@ -90,12 +71,13 @@ blocks:
     alias: ''
     amp: '1'
     comment: ''
-    freq: '1000'
+    freq: '60'
     maxoutbuf: '0'
     minoutbuf: '0'
     offset: '0'
     phase: '0'
     samp_rate: samp_rate
+    showports: 'False'
     type: float
     waveform: analog.GR_SIN_WAVE
   states:
@@ -128,35 +110,31 @@ blocks:
 - name: epy_block_0
   id: epy_block
   parameters:
-    _source_code: "import numpy as np\nfrom gnuradio import gr\nclass blk (gr. sync_block\
-      \ ):\n\tdef __init__ ( self ) : # only default arguments here\n\t\tgr. sync_block\
-      \ . __init__ (\n\t\tself ,\n\t\tname =' Promedios_de_tiempos ', # will show\
-      \ up in GRC\n\t\tin_sig =[ np. float32 ],\n\t\tout_sig =[ np. float32 ,np. float32\
-      \ ,np. float32 ,np. float32 ,np. float32 ]\n\t\t)\n\t\tself . acum_anterior\
-      \ = 0\n\t\tself . Ntotales = 0\n\t\tself . acum_anterior1 = 0\n\t\tself . acum_anterior2\
-      \ = 0\n\tdef work (self , input_items , output_items ):\n\t\tx = input_items\
-      \ [0] # Senial de entrada .\n\t\ty0 = output_items [0] # Promedio de la senial\n\
-      \t\ty1 = output_items [1] # Media de la senial\n\t\ty2 = output_items [2] #\
-      \ RMS de la senial\n\t\ty3 = output_items [3] # Potencia promedio de la senial\n\
-      \t\ty4 = output_items [4] # Desviacion estandar de la senial\n\t\t# Calculo\
-      \ del promedio\n\t\tN = len (x)\n\t\tself . Ntotales = self . Ntotales + N\n\
-      \t\tacumulado = self . acum_anterior + np. cumsum (x)\n\t\tself . acum_anterior\
-      \ = acumulado [N -1]\n\t\ty0 [:]= acumulado / self . Ntotales\n\t\t# Calculo\
-      \ de la media cuadratica\n\t\tx2=np. multiply (x,x)\n\t\tacumulado1 = self .\
-      \ acum_anterior1 + np. cumsum (x2)\n\t\tself . acum_anterior1 = acumulado [N\
-      \ -1]\n\t\ty1 [:] = acumulado1 / self . Ntotales\n\t\t# Calculo de la RMS\n\t\
-      \ty2 [:] = np. sqrt (y1)\n\t\t# Calculo de la potencia promedio\n\t\ty3 [:]\
-      \ = np. multiply (y2 ,y2)\n\t\t# Calculo de la desviacion estandar\n\t\tx3 =\
-      \ np. multiply (x-y0 ,x-y0)\n\t\tacumulado2 = self . acum_anterior2 + np. cumsum\
-      \ (x3)\n\t\tself . acum_anterior2 = acumulado2 [N -1]\n\t\ty4 [:] = np. sqrt\
-      \ ( acumulado2 / self . Ntotales )\n\t\treturn len (x)\n"
+    _source_code: "import numpy as np\nfrom gnuradio import gr\n\nclass StatsBlock(gr.sync_block):\n\
+      \    def __init__(self):\n        gr.sync_block.__init__(\n            self,\n\
+      \            name='Stats_Block',\n            in_sig=[np.float32],\n       \
+      \     out_sig=[np.float32, np.float32, np.float32, np.float32, np.float32]\n\
+      \        )\n        self.sum_x = 0\n        self.sum_x2 = 0\n        self.sum_x3\
+      \ = 0\n        self.N = 0\n\n    def work(self, input_items, output_items):\n\
+      \        x = input_items[0]\n\n        N = len(x)\n        self.N += N\n\n \
+      \       # Calculating sum of x, x^2, x^3\n        self.sum_x += np.sum(x)\n\
+      \        self.sum_x2 += np.sum(x ** 2)\n        self.sum_x3 += np.sum(x ** 3)\n\
+      \n        # Calculating mean\n        mean = self.sum_x / self.N\n        output_items[0][:]\
+      \ = mean\n\n        # Calculating mean square\n        mean_square = self.sum_x2\
+      \ / self.N\n        output_items[1][:] = mean_square\n\n        # Calculating\
+      \ RMS\n        rms = np.sqrt(mean_square)\n        output_items[2][:] = rms\n\
+      \n        # Calculating average power\n        average_power = mean_square\n\
+      \        output_items[3][:] = average_power\n\n        # Calculating standard\
+      \ deviation\n        standard_deviation = np.sqrt((self.sum_x2 - 2 * mean *\
+      \ self.sum_x + self.N * mean ** 2) / self.N)\n        output_items[4][:] = standard_deviation\n\
+      \n        return len(x)\n"
     affinity: ''
     alias: ''
     comment: ''
     maxoutbuf: '0'
     minoutbuf: '0'
   states:
-    _io_cache: (' Promedios_de_tiempos ', 'blk', [], [('0', 'float', 1)], [('0', 'float',
+    _io_cache: ('Stats_Block', 'StatsBlock', [], [('0', 'float', 1)], [('0', 'float',
       1), ('1', 'float', 1), ('2', 'float', 1), ('3', 'float', 1), ('4', 'float',
       1)], '', [])
     bus_sink: false
@@ -580,8 +558,8 @@ blocks:
 
 connections:
 - [analog_noise_source_x_1, '0', qtgui_time_sink_x_0, '1']
-- [analog_sig_source_x_0, '0', epy_block_0, '0']
 - [analog_sig_source_x_0, '0', qtgui_time_sink_x_0, '0']
+- [blocks_vector_source_x_0, '0', epy_block_0, '0']
 - [blocks_vector_source_x_0, '0', qtgui_time_sink_x_0, '2']
 - [epy_block_0, '0', qtgui_number_sink_0, '0']
 - [epy_block_0, '1', qtgui_number_sink_0_0, '0']
@@ -591,4 +569,4 @@ connections:
 
 metadata:
   file_format: 1
-  grc_version: 3.9.8.0
+  grc_version: 3.10.9.2

@@ -1,42 +1,48 @@
 import numpy as np
 from gnuradio import gr
-class blk (gr. sync_block ):
-	def __init__ ( self ) : # only default arguments here
-		gr. sync_block . __init__ (
-		self ,
-		name =' Promedios_de_tiempos ', # will show up in GRC
-		in_sig =[ np. float32 ],
-		out_sig =[ np. float32 ,np. float32 ,np. float32 ,np. float32 ,np. float32 ]
-		)
-		self . acum_anterior = 0
-		self . Ntotales = 0
-		self . acum_anterior1 = 0
-		self . acum_anterior2 = 0
-	def work (self , input_items , output_items ):
-		x = input_items [0] # Senial de entrada .
-		y0 = output_items [0] # Promedio de la senial
-		y1 = output_items [1] # Media de la senial
-		y2 = output_items [2] # RMS de la senial
-		y3 = output_items [3] # Potencia promedio de la senial
-		y4 = output_items [4] # Desviacion estandar de la senial
-		# Calculo del promedio
-		N = len (x)
-		self . Ntotales = self . Ntotales + N
-		acumulado = self . acum_anterior + np. cumsum (x)
-		self . acum_anterior = acumulado [N -1]
-		y0 [:]= acumulado / self . Ntotales
-		# Calculo de la media cuadratica
-		x2=np. multiply (x,x)
-		acumulado1 = self . acum_anterior1 + np. cumsum (x2)
-		self . acum_anterior1 = acumulado [N -1]
-		y1 [:] = acumulado1 / self . Ntotales
-		# Calculo de la RMS
-		y2 [:] = np. sqrt (y1)
-		# Calculo de la potencia promedio
-		y3 [:] = np. multiply (y2 ,y2)
-		# Calculo de la desviacion estandar
-		x3 = np. multiply (x-y0 ,x-y0)
-		acumulado2 = self . acum_anterior2 + np. cumsum (x3)
-		self . acum_anterior2 = acumulado2 [N -1]
-		y4 [:] = np. sqrt ( acumulado2 / self . Ntotales )
-		return len (x)
+
+class StatsBlock(gr.sync_block):
+    def __init__(self):
+        gr.sync_block.__init__(
+            self,
+            name='Stats_Block',
+            in_sig=[np.float32],
+            out_sig=[np.float32, np.float32, np.float32, np.float32, np.float32]
+        )
+        self.sum_x = 0
+        self.sum_x2 = 0
+        self.sum_x3 = 0
+        self.N = 0
+
+    def work(self, input_items, output_items):
+        x = input_items[0]
+
+        N = len(x)
+        self.N += N
+
+        # Calculating sum of x, x^2, x^3
+        self.sum_x += np.sum(x)
+        self.sum_x2 += np.sum(x ** 2)
+        self.sum_x3 += np.sum(x ** 3)
+
+        # Calculating mean
+        mean = self.sum_x / self.N
+        output_items[0][:] = mean
+
+        # Calculating mean square
+        mean_square = self.sum_x2 / self.N
+        output_items[1][:] = mean_square
+
+        # Calculating RMS
+        rms = np.sqrt(mean_square)
+        output_items[2][:] = rms
+
+        # Calculating average power
+        average_power = mean_square
+        output_items[3][:] = average_power
+
+        # Calculating standard deviation
+        standard_deviation = np.sqrt((self.sum_x2 - 2 * mean * self.sum_x + self.N * mean ** 2) / self.N)
+        output_items[4][:] = standard_deviation
+
+        return len(x)
